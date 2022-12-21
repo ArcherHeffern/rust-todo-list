@@ -1,26 +1,17 @@
+mod db;
+mod models;
+mod routes;
+
+use db::db::MongoRepo;
+
 #[macro_use] extern crate rocket;
-
-#[get("/")]
-fn index() -> &'static str {
-    "Hello, world!"
-}
-
-#[put("/")]
-fn put() -> &'static str {
-    "Updated"
-}
-
-#[post("/<id>")]
-fn post(id: &str) -> String {
-    format!("{}", id)
-}
-
-#[delete("/<id>")]
-fn delete(id: &str) -> String {
-    format!("{id}")
-}
+// get_todos, get_starred, get_counts, set_starred, update_content, increment_count, create_todo, delete_todo}
+use routes::routes::{create_todo};
 
 #[launch]
-fn rocket() -> _ {
-    rocket::build().mount("/api/", routes![index, put, post, delete])
+async fn rocket() -> _ {
+    let db = MongoRepo::init();
+    rocket::build()
+    .manage(db)
+    .mount("/api/", routes![create_todo])
 }
