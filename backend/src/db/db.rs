@@ -3,14 +3,17 @@
     use dotenv::dotenv;
 
     use mongodb::{
-        bson::{extjson::de::Error},
-        results::{ InsertOneResult},
-        sync::{Client, Collection},
+        bson::{doc, extjson::de::Error, oid::ObjectId},
+        results::{ InsertOneResult, UpdateResult},
+        sync::{Client, Collection, Cursor},
+        
     };
-    use crate::models::todo::Todo;
+    use rocket::serde::json::Json;
+    use crate::models::{todo::Todo, count::Count};
 
     pub struct MongoRepo {
         col: Collection<Todo>,
+        col2: Collection<Count>
     }
 
     impl MongoRepo {
@@ -21,28 +24,69 @@
                 Ok(v) => v.to_string(),
                 Err(_) => format!("Error loading env variable"),
             };
-            let client = Client::with_uri_str(uri).unwrap();
-            let db = client.database("rustDB");
-            let col: Collection<Todo> = db.collection("User");
-            MongoRepo { col }
+            let client = Client::with_uri_str(uri).unwrap();    // !bad error handling
+            let db = client.database("cluster0");
+            let col: Collection<Todo> = db.collection("Todo");
+            let col2: Collection<Count> = db.collection("Count");
+            MongoRepo { col, col2 }
         }
         
-        // creates new TODO
-        pub fn create_todo(&self, new_todo: Todo) -> Result<InsertOneResult, Error> {
-            let new_todo = Todo {
-                id: None,
-                title: new_todo.title,
-                content: new_todo.content,
-                starred: new_todo.starred
-            };
-            let user = self
-                .col
-                .insert_one(new_todo, None)
-                .ok()
-                .expect("Error creating user"); // ! better error handeling
-            Ok(user)
+        // gets all todos 
+        pub fn get_todos(&self) -> Result<Cursor<Todo>, mongodb::error::Error> {
+            self
+            .col
+            .find(doc!{}, None)
+        } 
+
+        // gets all starred todos
+        pub fn get_starred_todos(&self) -> Result<Cursor<Todo>, mongodb::error::Error> {
+            let filter = doc! {};
+            self
+            .col
+            .find(filter, None)
+        } 
+
+        // gets counter value: If DB does not find count doc, we will create a new 
+        // doc with initial value set to 0
+
+        // sets a todo as starred or unstarred - gets the todo by ID
+
+        // updates content and title of a todo - gets the todo by ID
+
+        // increments counter by 1: If document does not exist, It will be created and set to 1
+        pub fn increment_counter(&self) -> Result<i32, mongodb::error::Error> {
+            // find count
+            let doc = self
+            .col2
+            .find_one(doc! {} , None)?; // if error, return Err
+
+            if let Some(v) = doc {  // if DB found document: Update count by 1
+                let new_doc = doc! {
+                    "count": v.count + 1,
+                    "id": v.id
+                };
+            self
+            .col2
+            .update_one(doc!{}, new_doc, None)?;    // if error, return Err
+            return Ok(v.count + 1);
+            } else {    // otherwise: Create document and set value to 1
+                self
+                .col2
+                .insert_one(Count {id : None, count: 1}, None)?;    // if error, return Err
+                return Ok(1);
+            }
         }
 
-        // TODO other things!!!
+     pub fn create_todo(& self, new_todo: Todo) -> Result<InsertOneResult, mongodb::error::Error> {
+            let new_todo = Todo {
+                id: None,
+                ..new_todo
+            };
+            self
+                .col
+                .insert_one(new_todo, None)
+        }
+    
+    // deletes a todo by ID
 
     }
