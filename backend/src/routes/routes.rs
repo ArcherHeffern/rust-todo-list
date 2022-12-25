@@ -3,17 +3,40 @@ use mongodb::{results::*};/// bson::oid::ObjectId
 use rocket::{http::Status, serde::json::Json, State};
 
 // gets todos: If starred true, will get only the starred todos
-#[get("/", data="<starred>")]
+#[get("/<starred>")]
     pub fn get_todos(
         db: &State<MongoRepo>,
         starred: bool,
-    ) -> Result<Json<GetResult>, Status> {
-
+    ) -> Result<Json<Vec<Todo>>, Status> {
+        let db_response = db.get_todos(starred);
+        match db_response {
+            Ok(res) => Ok(Json(res)),
+            Err(_) => Err(Status::InternalServerError)
+        }
     }
 
 // gets count of total todos completed
-
+#[get("/getCount")]
+    pub fn get_counts(
+        db: &State<MongoRepo>
+    ) -> Result<Json<i32>, Status> {
+        let db_response = db.get_count();
+        match db_response {
+            Ok(res) => Ok(Json(res)),
+            Err(_) => Err(Status::InternalServerError)
+        }
+    }
 // updates a TODO to be starred or unstarred
+#[put("/toggle_starred")]
+    pub fn toggle_starred(
+        db: &State<MongoRepo>
+    ) -> Result<Json<Count>, Status> {
+        let db_response = db.toggle_starred(todo, starred);
+        match db_response {
+            Ok(res) => Ok(Json(res)),
+            Err(_) => Err(Status::InternalServerError)
+        }
+    }
 
 // updates content and title of a TODO
 
@@ -53,3 +76,4 @@ pub fn create_todo(
 }
 
 // deletes a todo
+// #[Delete("/:id")]
