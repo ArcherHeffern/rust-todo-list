@@ -1,6 +1,7 @@
 use crate::{models::{todo::Todo, count::Count}, db::db::MongoRepo};
-use mongodb::{results::*};/// bson::oid::ObjectId
+use mongodb::{results::*, bson::oid::ObjectId};/// bson::oid::ObjectId
 use rocket::{http::Status, serde::json::Json, State};
+use serde::Deserialize;
 
 // gets todos: If starred true, will get only the starred todos
 #[get("/<starred>")]
@@ -27,11 +28,21 @@ use rocket::{http::Status, serde::json::Json, State};
         }
     }
 // updates a TODO to be starred or unstarred
-#[put("/toggle_starred")]
+// params: id, starred: Boolean
+
+#[derive(Deserialize)]
+#[serde(crate = "rocket::serde")]
+pub struct Task {
+    id: Option<ObjectId>,
+    starred: bool
+}
+
+#[put("/toggle_starred", data="<payload>")]
     pub fn toggle_starred(
-        db: &State<MongoRepo>
-    ) -> Result<Json<Count>, Status> {
-        let db_response = db.toggle_starred(todo, starred);
+        db: &State<MongoRepo>,
+        payload: Json<Task>
+    ) -> Result<Json<UpdateResult>, Status> {
+        let db_response = db.toggle_starred(payload.id, payload.starred);
         match db_response {
             Ok(res) => Ok(Json(res)),
             Err(_) => Err(Status::InternalServerError)
@@ -39,12 +50,13 @@ use rocket::{http::Status, serde::json::Json, State};
     }
 
 // updates content and title of a TODO
+//TODO
 
 // increments counter by 1
 #[put("/counter")]
     pub fn update_counter(
         db: &State<MongoRepo>,
-    ) -> Result<Json<UpdateResult>, Status> {
+    ) -> Result<Json<i32>, Status> {
 
         let user_detail = db.increment_counter();
 

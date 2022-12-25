@@ -38,7 +38,7 @@
             let db_response = self
             .col
             .find(filter, None)?;
-            let jsonified_res = db_response.map(|doc| doc.unwrap()).collect(); //! better error handling
+            let jsonified_res = db_response.map(|doc| doc.unwrap()).collect();
             Ok(jsonified_res)
         } 
 
@@ -64,19 +64,23 @@
                 }
             }
         }
-
+// how to handle if the id was invalid
         // sets a todo as starred or unstarred - gets the todo by ID
-        pub fn toggle_starred(&self, todo: Todo, starred: bool) -> Result<UpdateResult, mongodb::error::Error> {
+        pub fn toggle_starred(&self, id: Option<ObjectId>, starred: bool) -> Result<UpdateResult, mongodb::error::Error> {
+            let filter = doc!{"id": id};
+            let db_res = self
+            .col
+            .find_one(filter.to_owned(), None)?.unwrap();
             let new_todo = doc! {
-                "id": todo.id,
-                "title": todo.title,
-                "content": todo.content,
+                "id": id,
+                "title": db_res.title,
+                "content": db_res.content,
                 "starred": starred,
             };
 
             self
             .col
-            .update_one(doc!{"id": todo.id}, new_todo, None)
+            .update_one(filter, new_todo, None)
 
         }
 
