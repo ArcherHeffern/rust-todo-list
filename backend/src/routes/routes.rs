@@ -4,6 +4,7 @@ use rocket::{http::Status, serde::json::Json, State};
 use serde::Deserialize;
 
 // gets todos: If starred true, will get only the starred todos
+// TODO: had random headers which were messing up, would not get a result
 #[get("/<starred>")]
     pub fn get_todos(
         db: &State<MongoRepo>,
@@ -12,7 +13,7 @@ use serde::Deserialize;
         let db_response = db.get_todos(starred);
         match db_response {
             Ok(res) => Ok(Json(res)),
-            Err(_) => Err(Status::InternalServerError)
+            Err(_) => Err(Status::InternalServerError),
         }
     }
 
@@ -86,6 +87,5 @@ pub fn create_todo(
         Err(_) => Err(Status::InternalServerError),
     }
 }
-
 // deletes a todo
 // #[Delete("/:id")]

@@ -26,7 +26,7 @@
                 Err(_) => format!("Error loading env variable"),
             };
             let client = Client::with_uri_str(uri).unwrap();    // !how to handle None?
-            let db = client.database("cluster0");
+            let db = client.database("Cluster0");
             let col: Collection<Todo> = db.collection("Todo");
             let col2: Collection<Count> = db.collection("Count");
             MongoRepo { col, col2 }
