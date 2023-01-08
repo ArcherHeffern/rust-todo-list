@@ -1,13 +1,11 @@
     use std::env;
     extern crate dotenv;
     use dotenv::dotenv;
-
     use mongodb::{
         bson::{doc, oid::ObjectId},
         results::{ InsertOneResult, UpdateResult, DeleteResult},
-        sync::{Client, Collection, Cursor},
+        sync::{Client, Collection},
         error::Error
-        
     };
 
     use crate::models::{todo::Todo, count::Count};
@@ -66,16 +64,18 @@
         }
 // how to handle if the id was invalid
         // sets a todo as starred or unstarred - gets the todo by ID
-        pub fn toggle_starred(&self, id: Option<ObjectId>, starred: bool) -> Result<UpdateResult, mongodb::error::Error> {
-            let filter = doc!{"id": id};
+        pub fn toggle_starred(&self, id: &String, starred: bool) -> Result<UpdateResult, mongodb::error::Error> {
+            let obj_id = ObjectId::parse_str(&id).unwrap();
+            let filter = doc!{"_id": obj_id};
             let db_res = self
             .col
             .find_one(filter.to_owned(), None)?.unwrap();
             let new_todo = doc! {
-                "id": id,
+                "$set": {
+                "id": obj_id,
                 "title": db_res.title,
                 "content": db_res.content,
-                "starred": starred,
+                "starred": starred,}
             };
 
             self
@@ -85,18 +85,27 @@
         }
 
         // updates content and title of a todo - gets the todo by ID
-        pub fn update_content(&self, new_todo: Todo) -> Result<UpdateResult, Error> {
-
+        pub fn update_content(&self, id: &String, new_todo: Todo) -> Result<UpdateResult, Error> {
+            let obj_id = ObjectId::parse_str(&id).unwrap();
+            let filter = doc!{"_id": obj_id};
+            let found = self.col.find_one(filter.to_owned(), None);
+            // print!("{}", new_todo.id.);
+            if let Ok(val) = found {
+                print!("{}", val.unwrap().content); 
+                print!("found the value");
+            } else {print!("DB error")}
             let new_todo_bson = doc! {  // theres gotta be a better way of doing this
+                "$set": {
                 "id": new_todo.id,
-                "title": new_todo.id,
+                "title": new_todo.title,
                 "content": new_todo.content,
-                "starred": new_todo.starred
+                "starred": new_todo.starred,
+            }
             };
 
             self
             .col
-            .update_one(doc! {"id": new_todo.id}, new_todo_bson, None)
+            .update_one(filter, new_todo_bson, None)
         }
 
         // increments counter by 1: If document does not exist, It will be created and set to 1
@@ -108,8 +117,8 @@
 
             if let Some(v) = doc {  // if DB found document: Update count by 1
                 let new_doc = doc! {
-                    "count": v.count + 1,
-                    "id": v.id
+                    "$set": {"_id": v.id,
+                    "count": v.count + 1,}
                 };
             self
             .col2
@@ -135,17 +144,30 @@
         }
     
     // deletes a todo by ID
-    pub fn delete_todo(& self, id: Option<ObjectId>) -> Result<DeleteResult, Error> {
-
+    pub fn delete_todo(& self, id: &String) -> Result<DeleteResult, Error> {
+        let obj_id = ObjectId::parse_str(&id).unwrap(); 
         // converts todo to BSON 
         let query = doc! {
-            "id": id
+            "_id": obj_id 
         };
 
         // deletes todo
         self
         .col
         .delete_one(query, None)
+    }
+
+    pub fn delete_all_todos(&self) -> Result<DeleteResult, Error> {
+        let query = doc!{};
+        self
+        .col
+        .delete_many(query, None)
+    }
+
+    pub fn delete_count(&self) -> Result<DeleteResult, Error> {
+        self
+        .col2
+        .delete_many(doc!{}, None)
     }
 
     }
